@@ -15,7 +15,7 @@ def extract_data(images):
     y = []
     for image_name in images:
         path = path_to_images + image_name
-        np_array_of_image = np.asarray(Image.open(path).convert('L'), dtype='float64') / 255
+        np_array_of_image = np.asarray(Image.open(path).convert('RGB'), dtype='float64') / 255
         x.append(np_array_of_image)
         label = [float(c) for c in image_name[:image_name.index('.jpg')].split(',')]
         y.append(np.asarray(label))

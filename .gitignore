@@ -1,0 +1,4 @@
+.idea/*
+*/images/*
+.DS_Store
+data/*.gz

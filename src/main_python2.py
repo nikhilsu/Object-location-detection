@@ -71,8 +71,9 @@ class CNN:
         z = y_true - y_predicted
         z_abs = tf.abs(z)
         c = 4.685
-        subset = tf.cast(tf.less_equal(z_abs, c), z_abs.dtype)
-        inv_subset = tf.logical_not(subset)
+        subset_bool = tf.less_equal(z_abs, c)
+        subset = tf.cast(subset_bool, z_abs.dtype)
+        inv_subset = tf.cast(tf.logical_not(subset_bool), z_abs.dtype)
         c_sq_by_six = c ** 2 / 6
         return (1 - ((1 - ((z / c) ** 2)) ** 3) * subset + inv_subset) * c_sq_by_six
 

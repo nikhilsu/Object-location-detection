@@ -1,11 +1,10 @@
 import gzip
 import pickle
+
 import numpy as np
 import tensorflow as tf
-
-from keras.layers import Conv2D
+from keras.layers import Conv2D, Activation
 from keras.layers import Dense
-from keras.layers import Dropout
 from keras.layers import Flatten
 from keras.layers import MaxPool2D
 from keras.models import Sequential
@@ -36,27 +35,29 @@ class CNN:
         # build  CNN model
 
         self.model = Sequential()
-        # self.model.add(MaxPool2D(pool_size=(2, 2),input_shape=(150,150,3)))
         self.model.add(Conv2D(32, (3, 3), input_shape=(150, 150, 3)))
+        self.model.add(Activation('relu'))
+        self.model.add(MaxPool2D(pool_size=(2, 2)))
+
         self.model.add(Conv2D(32, (3, 3)))
+        self.model.add(Activation('relu'))
         self.model.add(MaxPool2D(pool_size=(2, 2)))
 
-        self.model.add(Dropout(0.25))
+        self.model.add(Conv2D(16, (3, 3)))
+        self.model.add(Activation('relu'))
 
         self.model.add(Conv2D(16, (3, 3)))
-        self.model.add(Conv2D(16, (3, 3)))
+        self.model.add(Activation('relu'))
         self.model.add(MaxPool2D(pool_size=(2, 2)))
 
-        # self.model.add(Conv2D(16, (3, 3)))
-        # self.model.add(Conv2D(16, (3, 3)))
+        self.model.add(Conv2D(16, (3, 3)))
+        self.model.add(Activation('relu'))
+        self.model.add(MaxPool2D(pool_size=(2, 2)))
 
         self.model.add(Conv2D(8, (3, 3)))
-        self.model.add(Conv2D(8, (3, 3)))
-
-        # self.model.add(Conv2D(1, (3, 3)))
+        self.model.add(Activation('relu'))
 
         self.model.add(Flatten())
-        # self.model.add(Dense(25))
         self.model.add(Dense(3))
 
         self.model.compile(loss=self.__tukey_bi_weight_loss, optimizer='adam')

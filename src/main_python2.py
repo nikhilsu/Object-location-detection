@@ -12,11 +12,16 @@ from keras.models import Sequential
 
 
 class DataSet:
-    def __init__(self, location):
-        with gzip.open(location, 'rb') as f:
-            data_set_dict = pickle.load(f)
-        self.train_x, self.train_y = data_set_dict['train']['data'], data_set_dict['train']['label']
-        self.test_x, self.test_y = data_set_dict['test']['data'], data_set_dict['test']['label']
+    def __init__(self, location1, location2):
+        with gzip.open(location1, 'rb') as f:
+            data_set_dict1 = pickle.load(f)
+        with gzip.open(location2, 'rb') as f:
+            data_set_dict2 = pickle.load(f)
+        self.train_x, self.train_y = np.append(data_set_dict1['train']['data'],
+                                               data_set_dict2['train']['data'], axis=0), np.append(data_set_dict1['train']['label'],
+                                               data_set_dict2['train']['label'], axis=0)
+        self.test_x, self.test_y = np.append(data_set_dict1['test']['data'], data_set_dict2['test']['data'], axis=0),\
+                                   np.append(data_set_dict1['test']['label'], data_set_dict2['test']['label'], axis=0)
 
 
 class CNN:
@@ -86,7 +91,7 @@ class CNN:
 
 
 if __name__ == '__main__':
-    data_set = DataSet('../data/pumpkin.pkl.gz')
+    data_set = DataSet('../data/pumpkin1.pkl.gz', '../data/pumpkin2.pkl.gz')
     print(data_set.train_x.shape)
     print(data_set.train_y.shape)
     cnn = CNN(data_set.train_x, data_set.train_y)

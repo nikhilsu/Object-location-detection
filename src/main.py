@@ -1,5 +1,6 @@
 import gzip
 import pickle
+import tensorflow as tf
 
 from keras.layers import Conv2D
 from keras.layers import Dense
@@ -59,7 +60,17 @@ class CNN:
         # self.model.add(Dense(25))
         self.model.add(Dense(3))
 
-        self.model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+        self.model.compile(loss=self.__tukey_bi_weight_loss, optimizer='adam')
+
+    @staticmethod
+    def __tukey_bi_weight_loss(y_true, y_predicted):
+        z = y_true - y_predicted
+        z_abs = tf.abs(z)
+        c = 4.685
+        subset = tf.cast(tf.less_equal(z_abs, c), z_abs.dtype)
+        inv_subset = tf.logical_not(subset)
+        c_sq_by_six = c ** 2 / 6
+        return (1 - ((1 - ((z / c) ** 2)) ** 3) * subset + inv_subset) * c_sq_by_six
 
     def train(self):
         self.model.fit(self.train_x, self.train_y, self.batch_size, self.epochs)

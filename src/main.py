@@ -1,5 +1,6 @@
 import gzip
 import pickle
+import numpy as np
 import tensorflow as tf
 
 from keras.layers import Conv2D
@@ -23,16 +24,14 @@ class CNN:
     CNN classifier
     """
 
-    def __init__(self, train_x, train_y, test_x, test_y, epochs=75, batch_size=128):
+    def __init__(self, train_x, train_y, epochs=75, batch_size=128):
         """
         initialize CNN classifier
         """
         self.batch_size = batch_size
         self.epochs = epochs
         self.train_x = train_x
-        self.test_x = test_x
         self.train_y = train_y
-        self.test_y = test_y
 
         # build  CNN model
 
@@ -75,47 +74,24 @@ class CNN:
     def train(self):
         self.model.fit(self.train_x, self.train_y, self.batch_size, self.epochs)
 
-    def evaluate(self):
+    def evaluate(self, test_x, test_y, slack_delta=0.15):
+        predictions = self.model.predict(test_x)
+        number_of_labels = predictions.shape[0]
 
-        """
-        test CNN classifier and get accuracy
-        :return: accuracy
-        """
-        predicted = self.model.predict(self.test_x)
-        j = 0
-        count = 0
-        count_x = 0
-        count_y = 0
-        count_z = 0
-        for i in predicted:
-            print(self.test_y[j])
-            print('predicted')
-            print(i)
-            if ((abs(self.test_y[j][0] - i[0]) < 15) and (abs(self.test_y[j][1] - i[1]) < 15) and (
-                    abs(self.test_y[j][2] - i[2]) < 15)):
-                count = count + 1
+        correct_predictions = np.less_equal(np.fabs(test_y - predictions), slack_delta)
+        accuracy_per_axis = np.sum(correct_predictions, axis=0) / number_of_labels
+        accuracy = np.count_nonzero((np.all(correct_predictions, axis=1))) / number_of_labels
 
-            if abs(self.test_y[j][0] - i[0]) < 15:
-                count_x = count_x + 1
-            if abs(self.test_y[j][1] - i[1]) < 15:
-                count_y = count_y + 1
-            if abs(self.test_y[j][2] - i[2]) < 15:
-                count_z = count_z + 1
-            j = j + 1
-        print(count)
-        print(count_x)
-        print(count_y)
-        print(count_z)
-        print(len(predicted))
-        return self.model.evaluate(self.test_x, self.test_y, verbose=10)
+        return accuracy, accuracy_per_axis
 
 
 if __name__ == '__main__':
     data_set = DataSet('../data/pumpkin.pkl.gz')
     print(data_set.train_x.shape)
     print(data_set.train_y.shape)
-
-    cnn = CNN(data_set.train_x, data_set.train_y, data_set.test_x, data_set.test_y)
+    sess = tf.Session()
+    cnn = CNN(data_set.train_x, data_set.train_y)
     cnn.train()
-    acc = cnn.evaluate()
-    print(acc)
+    accuracies = cnn.evaluate(data_set.test_x, data_set.test_y)
+    print('Accuracy of the model: ' + str(accuracies[0]))
+    print('Accuracy per axis(x, y, z): ' + str(accuracies[1]))

@@ -74,9 +74,9 @@ class CNN:
     def train(self):
         self.model.fit(self.train_x, self.train_y, self.batch_size, self.epochs)
 
-    def evaluate(self, test_x, test_y, slack_delta=0.15):
+    def evaluate(self, test_x, test_y, slack_delta=0.2):
         predictions = self.model.predict(test_x)
-        number_of_labels = predictions.shape[0]
+        number_of_labels = float(predictions.shape[0])
 
         correct_predictions = np.less_equal(np.fabs(test_y - predictions), slack_delta)
         accuracy_per_axis = np.sum(correct_predictions, axis=0) / number_of_labels

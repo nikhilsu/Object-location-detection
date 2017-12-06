@@ -1,21 +1,17 @@
-import gzip
-import pickle
-
 import numpy as np
 import tensorflow as tf
+import sys
+
 from keras.layers import Conv2D, Activation
 from keras.layers import Dense
 from keras.layers import Flatten
 from keras.layers import MaxPool2D
 from keras.models import Sequential
 
-
-class DataSet:
-    def __init__(self, location):
-        with gzip.open(location, 'rb') as f:
-            data_set_dict = pickle.load(f)
-        self.train_x, self.train_y = data_set_dict['train']['data'], data_set_dict['train']['label']
-        self.test_x, self.test_y = data_set_dict['test']['data'], data_set_dict['test']['label']
+if sys.version_info[0] < 3:
+    from data_set_py2 import DataSet
+else:
+    from data_set_py3 import DataSet
 
 
 class CNN:
@@ -67,8 +63,9 @@ class CNN:
         z = y_true - y_predicted
         z_abs = tf.abs(z)
         c = 4.685
-        subset = tf.cast(tf.less_equal(z_abs, c), z_abs.dtype)
-        inv_subset = tf.logical_not(subset)
+        subset_bool = tf.less_equal(z_abs, c)
+        subset = tf.cast(subset_bool, z_abs.dtype)
+        inv_subset = tf.cast(tf.logical_not(subset_bool), z_abs.dtype)
         c_sq_by_six = c ** 2 / 6
         return (1 - ((1 - ((z / c) ** 2)) ** 3) * subset + inv_subset) * c_sq_by_six
 
@@ -87,7 +84,7 @@ class CNN:
 
 
 if __name__ == '__main__':
-    data_set = DataSet('../data/pumpkin.pkl.gz')
+    data_set = DataSet()
     print(data_set.train_x.shape)
     print(data_set.train_y.shape)
     cnn = CNN(data_set.train_x, data_set.train_y)

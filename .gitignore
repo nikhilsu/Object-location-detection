@@ -1,4 +1,6 @@
 .idea/*
 */images/*
+*/small_data_set/*
 .DS_Store
 data/*.gz
+src/*.pyc

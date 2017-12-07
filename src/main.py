@@ -18,7 +18,7 @@ class CNN:
     CNN classifier
     """
 
-    def __init__(self, train_x, train_y, epochs=75, batch_size=128):
+    def __init__(self, train_x, train_y, epochs=100, batch_size=128):
         """
         initialize CNN classifier
         """
@@ -80,13 +80,20 @@ class CNN:
 
         return accuracy, accuracy_per_axis
 
+    def save_model(self, filename):
+        self.model.save(filename)
+
 
 if __name__ == '__main__':
+    model_filename = 'pumpkin_model.h5'
     data_set = DataSet()
     print(data_set.train_x.shape)
     print(data_set.train_y.shape)
-    cnn = CNN(data_set.train_x, data_set.train_y)
+    cnn = CNN(np.append(data_set.train_x, data_set.test_x, axis=0),
+              np.append(data_set.train_y, data_set.test_y, axis=0))
     cnn.train()
+    print("Saving model to " + model_filename)
+    cnn.save_model(model_filename)
     accuracies = cnn.evaluate(data_set.test_x, data_set.test_y)
     print('Accuracy of the model: ' + str(accuracies[0]))
     print('Accuracy per axis(x, y, z): ' + str(accuracies[1]))

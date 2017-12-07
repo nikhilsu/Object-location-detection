@@ -1,11 +1,10 @@
-import numpy as np
-import tensorflow as tf
 import sys
 
-from keras.layers import Conv2D, Activation
+import numpy as np
+import tensorflow as tf
+from keras.layers import Conv2D, Activation, AvgPool2D
 from keras.layers import Dense
 from keras.layers import Flatten
-from keras.layers import MaxPool2D
 from keras.models import Sequential
 
 if sys.version_info[0] < 3:
@@ -33,22 +32,21 @@ class CNN:
         self.model = Sequential()
         self.model.add(Conv2D(32, (3, 3), input_shape=(150, 150, 3)))
         self.model.add(Activation('relu'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
+        self.model.add(AvgPool2D(pool_size=(2, 2)))
 
         self.model.add(Conv2D(32, (3, 3)))
         self.model.add(Activation('relu'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
+        self.model.add(AvgPool2D(pool_size=(2, 2)))
 
         self.model.add(Conv2D(16, (3, 3)))
         self.model.add(Activation('relu'))
 
         self.model.add(Conv2D(16, (3, 3)))
         self.model.add(Activation('relu'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
+        self.model.add(AvgPool2D(pool_size=(2, 2)))
 
         self.model.add(Conv2D(16, (3, 3)))
         self.model.add(Activation('relu'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
 
         self.model.add(Conv2D(8, (3, 3)))
         self.model.add(Activation('relu'))
@@ -56,7 +54,7 @@ class CNN:
         self.model.add(Flatten())
         self.model.add(Dense(3))
 
-        self.model.compile(loss=self.__tukey_bi_weight_loss, optimizer='adam')
+        self.model.compile(loss=self.__tukey_bi_weight_loss, optimizer='adam', metrics=['acc'])
 
     @staticmethod
     def __tukey_bi_weight_loss(y_true, y_predicted):
@@ -72,7 +70,7 @@ class CNN:
     def train(self):
         self.model.fit(self.train_x, self.train_y, self.batch_size, self.epochs)
 
-    def evaluate(self, test_x, test_y, slack_delta=0.2):
+    def evaluate(self, test_x, test_y, slack_delta=0.1):
         predictions = self.model.predict(test_x)
         number_of_labels = float(predictions.shape[0])
 

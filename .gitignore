@@ -4,3 +4,4 @@
 .DS_Store
 data/*.gz
 src/*.pyc
+src/__pycache__/*

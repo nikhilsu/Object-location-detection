@@ -18,7 +18,7 @@ def __tukey_bi_weight_loss(y_true, y_predicted):
 
 
 def capture_and_save_image(filename):
-    camera = cv2.VideoCapture(0)
+    camera = cv2.VideoCapture(1)
     return_value, image = camera.read()
     smaller_image = cv2.resize(image, (150, 150), interpolation=cv2.INTER_AREA)
     cv2.imwrite(filename, smaller_image)
@@ -45,6 +45,6 @@ while True:
     test_y = model.predict(test_x_resized)
     flattened_test_y = test_y.flatten()
     test_y_to_vicon = '{},{},{}'.format(flattened_test_y[0], flattened_test_y[1], flattened_test_y[2])
-    print(test_y_to_vicon)
+    print('Sending data: ' + test_y_to_vicon)
 
-    sock.send(test_y_to_vicon)
+    sock.send(test_y_to_vicon.encode())

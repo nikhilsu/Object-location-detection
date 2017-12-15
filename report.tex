@@ -1,0 +1,370 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\usepackage[final]{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2017}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage{amsmath,amsthm,amscd,amssymb}
+
+\title{Object Position Tracking with Convolution Neural Networks}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Koushik Chennugari\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{koushik.chennugari@colorado.edu} \\
+  %% examples of more authors
+  \And
+  Deepak Kancharla\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{surya.kancharla@colorado.edu} \\
+  \And
+  Rohit Mehra\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{rohit.mehra@colorado.edu} \\
+  \And
+  Nikhil Sulegaon\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{nisu8311@colorado.edu} \\
+  \And
+  Michael Walker\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{miwa2080@colorado.edu} \\
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+Augmented reality technology allows for interactions between virtual objects and statically-positioned (stationary) real objects, but it does not allow for interactions between virtual objects and dynamically-positioned (moving) real objects. One cannot place a hologram on a target person and/or robot and have it move appropriately with the target. Current solutions to this problem consist of using fiducial markers to estimate pose or the use of industrial grade motion capture cameras (Vicon, etc.) to capture the position of objects in a 3D environment. We propose a method that would allow us to track objects without the need for either fiducial markers and/or motion capture cameras, instead using convolutional neural networks. This method allows us to anchor holograms to dynamically moving objects using only images from a household webcam with a prediction accuracy of 95\%.
+\end{abstract}
+
+\section{Introduction}
+
+Attaching holograms to moving objects is a problem critical to the advancement of augmented reality (AR) technology. AR is a technology that overlays computer graphics onto real world environments in real-time. AR interfaces have three main features: (1) users are able to view both real and virtual objects in a combined scene, (2) users receive the impression that virtual objects are actually expressed and embedded directly in the real world, and (3) the virtual objects can be interacted with in real-time.
+
+Using state-of-the-art ARHMD technology, such as that of the Microsoft HoloLens, spatial meshes of the user’s environment can be created in real-time using spatial mapping techniques such as Kinect Fusion, which in turn allows the ARHMD to track its pose relative to the environment and for virtual objects to interact with surfaces in the user’s real environment. This allows for functionalities such as dropping a virtual ball on a real desk and seeing it roll off the table and onto the floor or having a UI menu conform to the surface of a wall. However, this technique only works for stationary objects, which is a major limitation of current AR HMDs.
+
+However, a solution to this limitation is likely to be found in the field of neural networks (NN). NN's have shown great success in the realm of computer vision. Tasks such as detecting whether or not an object is in an image or even classifying what object is in an image has been performed with great accuracy with NN’s. Our team proposes a method of rapidly creating large, robust training datasets and a convolutional neural network (CNN) architecture for accurately predicting the 3D position (X, Y, Z) of a tracked object,  using only images taken from a standard household webcam.
+
+\section{Data Collection}
+\label{data_collect}
+
+To create a dataset for our CNN, we needed to create a pipeline that allowed for the rapid creation of large, accurate datasets. This requirement was largely due to the fact that the features of the target tracked object (color, brightness, shape, rigidity, etc.) would impact the performance of the model, and multiple differing objects would need to be evaluated for tracking appropriateness.
+
+To accomplish this, we used a network of Vicon motion capture cameras (measurements accurate to a millimeter) to track the 3D position of a target object in real-time. We utilized a 16ft x 16ft lab environment with unmarked solid-colored walls to decrease chance of environment feature interference (see Figure \ref{fig:lab}). A webcam (Sony PLAYSTATION Eye) was mounted to a static location overlooking the lab environment and connected to an Odroid XU4 (Heterogeneous Multi-Processing Octa-Core Linux Computer) (see Figure \ref{fig:webcam}). The object to be tracked was then attached to a 8ft boom and moved around the environment within the webcam's field of view (FOV). The webcam then took images of the object in the room at 30 fps. Whenever an image was taken of the object, the Odroid requested the current position of the object from the Vicon camera system, which was then paired with the capture image. A dataset providing an extremely accurate ground truth of over ten thousand labeled images could then be easily created in under ten minutes (see Figure \ref{fig:sampledata}).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{labEnviro.jpg}
+  \caption{Lab environment and mounted webcam.}
+  \label{fig:lab}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{camOdroid.jpg}
+  \caption{Webcam (Sony PLAYSTATION Eye) and Odroid (Heterogeneous Multi-Processing Octa-Core Linux Computer).}
+  \label{fig:webcam}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\linewidth]{labeledData.png}
+  \caption{Sample dataset images with corresponding position labels.}
+  \label{fig:sampledata}
+\end{figure}
+
+\section{CNN Design and Results}
+\label{design_results}
+In this section, we present details of our Convolutional Neural Network model (CNN) for object pose estimation from a single image. Before we delineate the architectures of our model and how we arrived at it, let us talk about how we calculate the accuracy of our model.
+
+\subsection{Calculating Accuracy}
+Our Deep Convolutional Neural Network performs a regression task of predicting three values - the x, y and, z coordinates of the object whose pose we are estimating. A prediction is considered correct if and only if the absolute difference between the respective axes of the predicted and ground-truth coordinates of the object is less than 10 centimeters
+$$\left|\hat{y}_{x} - y_{x}\right| \le 10\ and\ \left|\hat{y}_{y} - y_{y}\right| \le 10\ and \left|\hat{y}_{z} - y_{z}\right| \le 10$$
+
+where, ŷ\textsubscript{x} and y\textsubscript{x} are the predicted and ground-truth value of the x coordinate,
+ŷ\textsubscript{y} and y\textsubscript{y} are the predicted and ground-truth value of the y coordinate, and ŷ\textsubscript{z} and y\textsubscript{z} are the predicted and ground-truth value of the z coordinate respectively.
+
+We then compute the accuracy(acc\textsubscript{xyz}) of the model based on the total number of correct predictions. Apart from acc\textsubscript{xyz}, we also evaluate a model based the individual accuracies in predicting the x, y, and the z coordinates separately - acc\textsubscript{x}, acc\textsubscript{y} and acc\textsubscript{z}.
+
+\subsection{Model architecture}
+Our approach to building a CNN was to pipe together a group of convolutional blocks consisting of a convolutional layer and a pooling layer. One of our very initial models consisted of three convolutional blocks with three fully connected layers succeeding it as shown in Figure \ref{fig:model1}. Relu was used as the activation function of each of the convolutional layer. The loss function used was Mean Squared Error. This model gave an average accuracy(acc\textsubscript{xyz}) of 42\% with the individual accuracies being - acc\textsubscript{x} = 78\%, acc\textsubscript{y} = 51\% and acc\textsubscript{z} = 89\%.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\linewidth]{model1.png}
+  \caption{Interim Model 1.}
+  \label{fig:model1}
+\end{figure}
+
+To increase the accuracy further, we added three more Convolutional Blocks to the CNN as shown in Figure \ref{fig:model2}. As a consequence, the average accuracy of the model (acc\textsubscript{xyz}) burgeoned to 83\%. The average individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} were 95\%, 87\% and 97\% respectively.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{model2.png}
+  \caption{Interim Model 2.}
+  \label{fig:model2}
+\end{figure}
+
+We can infer from the observations of the above models that the model performance is being brought down by acc\textsubscript{y}. Hence, we tweaked our CNN and made use of different loss function to better predict the depth(acc\textsubscript{y}) of the object from an image.
+
+\subsection{Loss function}
+
+In our regression task, we used a straightforward loss function - L2 norm that minimizes the squared Euclidean distance
+between the estimated values ŷ and the ground-truth y. However, L2 norm loss function is not robust to outliers. Convex regression loss functions are considered not robust [4]. During back-propagation, small differences between the ground-truth and the estimated values have a little influence to the CNN weights modification, while large differences between the ground-truth and the estimated values (outliers)
+make a large penalty, which biases the whole training process towards the outliers [4]. Inspired by Robust Statistics [4, 5], we consider a nonconvex loss function that is robust in regression tasks, namely
+Tukey's biweight loss function (Eq. \ref{tukeyEqn}) [5]. Tukey's biweight loss function has the property that the small residual values influence the training process, and it is robust to the outliers (large difference between the ground-truth depth value and the estimated depth value). During back-propagation, the magnitude of the outliers’ gradient sets closed to zero, so it will suppress the influence of the outliers during the training process[6].
+
+\begin{equation}
+\label{tukeyEqn}
+\rho(r)=
+\begin{cases}
+\frac{c^2}{6}\left[1\ -\ \left(1\ -\ \frac{r^2}{c^2}\right)^3 \right],  & \left|r\right|\ \le\ c \\
+\frac{c^2}{6}, & otherwise \\
+\end{cases}\\
+\end{equation}
+
+Where r is the residual i.e, the difference between the ground-truth y and the estimated depth value ŷ.
+\begin{equation}
+r\ = \ \hat{y} - y
+\end{equation}
+
+\subsection{Effect of Tukey's Biweight Loss Function}
+Using a non-convex loss function like Tukey's biweight, pushed the accuracy of our model (acc\textsubscript{xyz}) to 92\% with the individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} being 98\%, 93\%, and 99\% respectively.
+
+We also learned that regression tasks required fewer filters with small kernel size and almost no need to use fully connected layers compared to classification tasks. Thus, the number of fully connected layers in our CNN was reduced to one as shown in Figure \ref{fig:model3}. This reduced the number of parameters and the computational cost also extracting more powerful features from the input image. [6]. The accuracy(acc\textsubscript{xyz}) of this model turned out to be 97\% with individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} being 98\%, 98\%, and 99\% respectively.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{final.png}
+  \caption{Final architecture of the CNN with Tukey's Biweight as loss function.}
+  \label{fig:model3}
+\end{figure}
+
+The Table \ref{acc-table} shows a gist of the accuracies achieved with different models.
+
+\begin{table}[t]
+  \caption{Accuracies of different models when trained for 100 epochs}
+  \label{acc-table}
+  \centering
+  \begin{tabular}{lcccccc}
+    \toprule
+    \multicolumn{6}{r}{Average Accuracy(5 trials)}                   \\
+    \cmidrule{3-7}
+    Model Architecture & Loss function & acc\textsubscript{xyz }& acc\textsubscript{x} & acc\textsubscript{y} & acc\textsubscript{z} & $\sigma_{xyz}$\\
+    \midrule
+    3 Conv Blocks, 3 Dense & MSE  & 42\% & 78\% & 52\% & 89\% & 0.14\\
+    6 Conv Blocks, 3 Dense & MSE & 83\% & 95\% & 87\% & 97\% & 0.11\\
+    6 Conv Blocks, 3 Dense & Tukey's Biweight & 92\% & 98\% & 93\% & 99\% & 0.03 \\
+    6 Conv Blocks, 1 Dense & Tukey's Biweight & 97\% & 98\% & 98\% & 99\% & 0.01 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
+
+\subsection{Headings: second level}
+
+Second-level headings should be in 10-point type.
+
+\subsubsection{Headings: third level}
+
+Third-level headings should be in 10-point type.
+
+\paragraph{Paragraphs}
+
+There is also a \verb+\paragraph+ command available, which sets the
+heading in bold, flush left, and inline with the text, with the
+heading followed by 1\,em of space.
+
+\section{Discussion}
+\label{discussion}
+
+These instructions apply to everyone.
+
+\subsection{Citations within the text}
+
+The \verb+natbib+ package will be loaded for you by default.
+Citations may be author/year or numeric, as long as you maintain
+internal consistency.  As to the format of the references themselves,
+any style is acceptable as long as it is used consistently.
+
+The documentation for \verb+natbib+ may be found at
+\begin{center}
+  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
+\end{center}
+Of note is the command \verb+\citet+, which produces citations
+appropriate for use in inline text.  For example,
+\begin{verbatim}
+   \citet{hasselmo} investigated\dots
+\end{verbatim}
+produces
+\begin{quote}
+  Hasselmo, et al. (1995) investigated\dots
+\end{quote}
+
+If you wish to load the \verb+natbib+ package with options, you may
+add the following before loading the \verb+nips_2017+ package:
+\begin{verbatim}
+   \PassOptionsToPackage{options}{natbib}
+\end{verbatim}
+
+If \verb+natbib+ clashes with another package you load, you can add
+the optional argument \verb+nonatbib+ when loading the style file:
+\begin{verbatim}
+   \usepackage[nonatbib]{nips_2017}
+\end{verbatim}
+
+As submission is double blind, refer to your own published work in the
+third person. That is, use ``In the previous work of Jones et
+al. [4],'' not ``In our previous work [4].'' If you cite your other
+papers that are not widely available (e.g., a journal paper under
+review), use anonymous author names in the citation, e.g., an author
+of the form ``A. Anonymous.''
+
+\subsection{Footnotes}
+
+Footnotes should be used sparingly.  If you do require a footnote,
+indicate footnotes with a number\footnote{Sample of the first
+  footnote.} in the text. Place the footnotes at the bottom of the
+page on which they appear.  Precede the footnote with a horizontal
+rule of 2~inches (12~picas).
+
+Note that footnotes are properly typeset \emph{after} punctuation
+marks.\footnote{As in this example.}
+
+\subsection{Tables}
+
+All tables must be centered, neat, clean and legible.  The table
+number and title always appear before the table.  See
+Table~\ref{sample-table}.
+
+Place one line space before the table title, one line space after the
+table title, and one line space after the table. The table title must
+be lower case (except for first word and proper nouns); tables are
+numbered consecutively.
+
+Note that publication-quality tables \emph{do not contain vertical
+  rules.} We strongly suggest the use of the \verb+booktabs+ package,
+which allows for typesetting high-quality, professional tables:
+\begin{center}
+  \url{https://www.ctan.org/pkg/booktabs}
+\end{center}
+This package was used to typeset Table~\ref{sample-table}.
+
+\begin{table}[t]
+  \caption{Sample table title}
+  \label{sample-table}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \multicolumn{2}{c}{Part}                   \\
+    \cmidrule{1-2}
+    Name     & Description     & Size ($\mu$m) \\
+    \midrule
+    Dendrite & Input terminal  & $\sim$100     \\
+    Axon     & Output terminal & $\sim$10      \\
+    Soma     & Cell body       & up to $10^6$  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Conclusion}
+
+Koushik and Deepak will write:
+
+ideas for limitations/future work section:
+- talk about state of the art (i.e. papers we used for motivation/inspiration), if given time we could go in X direction (etc, etc,...) 
+- talk about how we would expand to pose with rotations (talk about how we created a dataset for this but the scope of expanding the project was out of the scope of the class)
+- talk about how we would want to port this to moving camera (not just stationary)
+- how we would want to generalize this enough so it works outside the lab environment
+
+- please add a link to our videos (showcasing data collection and demos)
+https://drive.google.com/drive/folders/1iitwG0M6WlqesChOWIUcK1qrPzFrHt7g?usp=sharing
+
+\section*{References}
+
+References follow the acknowledgments. Use unnumbered first-level
+heading for the references. Any choice of citation style is acceptable
+as long as you are consistent. It is permissible to reduce the font
+size to \verb+small+ (9 point) when listing the references. {\bf
+  Remember that you can go over 8 pages as long as the subsequent ones contain
+  \emph{only} cited references.}
+\medskip
+
+\small
+
+[1] Alexander, J.A. \& Mozer, M.C. (1995) Template-based algorithms
+for connectionist rule extraction. In G. Tesauro, D.S. Touretzky and
+T.K. Leen (eds.), {\it Advances in Neural Information Processing
+  Systems 7}, pp. 609--616. Cambridge, MA: MIT Press.
+
+[2] Bower, J.M. \& Beeman, D. (1995) {\it The Book of GENESIS:
+  Exploring Realistic Neural Models with the GEneral NEural SImulation
+  System.}  New York: TELOS/Springer--Verlag.
+
+[3] Hasselmo, M.E., Schnell, E. \& Barkai, E. (1995) Dynamics of
+learning and recall at excitatory recurrent synapses and cholinergic
+modulation in rat hippocampal region CA3. {\it Journal of
+  Neuroscience} {\bf 15}(7):5249-5262.
+
+[4] V. Belagiannis, C. Rupprecht, G. Carneiro, and N. Navab, “Robust
+optimization for deep regression,” in Proc. Conf. International
+Conference on Computer Vision, 2015.
+
+[5] M. J. Black and A. Rangarajan, “On the unification of line processes,
+outlier rejection, and robust statistics with applications in early vision,”
+IJCV, 1996.
+
+[6] A. J. Afifi and O. Hellwich, "Object Depth Estimation from a Single Image Using Fully Convolutional Neural Network," 2016 International Conference on Digital Image Computing: Techniques and Applications (DICTA), Gold Coast, QLD, 2016, pp. 1-7.
+
+\end{document}

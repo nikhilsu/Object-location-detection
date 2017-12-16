@@ -1,0 +1,248 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\usepackage[final]{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2017}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage{amsmath,amsthm,amscd,amssymb}
+
+\title{Object Position Tracking with Convolution Neural Networks}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{
+  Koushik Chennugari\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{koushik.chennugari@colorado.edu} \\
+  %% examples of more authors
+  \And
+  Deepak Kancharla\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{surya.kancharla@colorado.edu} \\
+  \And
+  Rohit Mehra\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{rohit.mehra@colorado.edu} \\
+  \And
+  Nikhil Sulegaon\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{nisu8311@colorado.edu} \\
+  \And
+  Michael Walker\\
+  CU Boulder\\
+  Boulder, CO 80309 \\
+  \texttt{miwa2080@colorado.edu} \\
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+Augmented reality technology allows for interactions between virtual objects and statically-positioned (stationary) real objects, but it does not allow for interactions between virtual objects and dynamically-positioned (moving) real objects. One cannot place a hologram on a target person and/or robot and have it move appropriately with the target. Current solutions to this problem consist of using fiducial markers to estimate pose or the use of industrial grade motion capture cameras (Vicon, etc.) to capture the position of objects in a 3D environment. We propose a method that would allow us to track objects without the need for either fiducial markers and/or motion capture cameras, instead using convolutional neural networks. This method allows us to anchor holograms to dynamically moving objects using only images from a household webcam with a prediction accuracy of 97\%.
+\end{abstract}
+
+\section{Introduction}
+
+Attaching holograms to moving objects is a problem critical to the advancement of augmented reality (AR) technology. AR is a technology that overlays computer graphics onto real world environments in real-time. AR interfaces have three main features: (1) users are able to view both real and virtual objects in a combined scene, (2) users receive the impression that virtual objects are actually expressed and embedded directly in the real world, and (3) the virtual objects can be interacted with in real-time.
+
+Using state-of-the-art ARHMD technology, such as that of the Microsoft HoloLens, spatial meshes of the user’s environment can be created in real-time using spatial mapping techniques such as Kinect Fusion, which in turn allows the ARHMD to track its pose relative to the environment and for virtual objects to interact with surfaces in the user’s real environment. This allows for functionalities such as dropping a virtual ball on a real desk and seeing it roll off the table and onto the floor or having a UI menu conform to the surface of a wall. However, this technique only works for stationary objects, which is a major limitation of current AR HMDs.
+
+However, a solution to this limitation is likely to be found in the field of neural networks (NN). NN's have shown great success in the realm of computer vision. Tasks such as detecting whether or not an object is in an image or even classifying what object is in an image has been performed with great accuracy with NN’s. Our team proposes a method of rapidly creating large, robust training datasets and a convolutional neural network (CNN) architecture for accurately predicting the 3D position (X, Y, Z) of a tracked object,  using only images taken from a standard household webcam.
+
+\section{Data Collection}
+\label{data_collect}
+
+To create a dataset for our CNN, we needed to create a pipeline that allowed for the rapid creation of large, accurate datasets. This requirement was largely due to the fact that the features of the target tracked object (color, brightness, shape, rigidity, etc.) would impact the performance of the model, and multiple differing objects would need to be evaluated for tracking appropriateness.
+
+To accomplish this, we used a network of Vicon motion capture cameras (measurements accurate to a millimeter) to track the 3D position of a target object in real-time. We utilized a 16ft x 16ft lab environment with unmarked solid-colored walls to decrease chance of environment visual feature interference such as object clutter and similar colors to our target object (see Figure \ref{fig:lab}). A webcam (Sony PLAYSTATION Eye) was mounted to a static location overlooking the lab environment and connected to an Odroid XU4 (Heterogeneous Multi-Processing Octa-Core Linux Computer) (see Figure \ref{fig:webcam}). The object to be tracked was then attached to a 8ft boom and moved around the environment within the webcam's field of view (FOV). The webcam then took images of the object in the room at 30 fps. Whenever an image was taken of the object, the Odroid requested the current position of the object from the Vicon camera system, which was then paired with the capture image. A dataset providing an extremely accurate ground truth of over ten thousand labeled images could then be easily created in under ten minutes (see Figure \ref{fig:sampledata}).
+
+\begin{figure}[!tbp]
+  \centering
+  \begin{minipage}[b]{0.48\textwidth}
+    \includegraphics[width=\linewidth]{labEnviro.jpg}
+    \caption{Lab environment and mounted webcam.}
+    \label{fig:lab}
+   \end{minipage}
+   \hfill
+  \begin{minipage}[b]{0.45\textwidth}   
+    \includegraphics[width=\linewidth]{camOdroid.jpg}
+    \caption{Webcam (Sony PLAYSTATION Eye) and Odroid (Heterogeneous Multi-Processing Octa-Core Linux Computer).}
+    \label{fig:webcam}
+  \end{minipage}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{labeledDataset.png}
+  \caption{Sample dataset images with corresponding position labels(X, Y, Z).}
+  \label{fig:sampledata}
+\end{figure}
+
+
+\section{CNN Design and Results}
+\label{design_results}
+In this section, we present details of our CNN for object position estimation from a single image. Before we delineate the architectures of our model and how we arrived at it, we will elaborate on how model accuracy calculations were performed.
+
+\subsection{Calculating Accuracy}
+Our Deep CNN performs a regression task of predicting three values:  X, Y, and Z coordinates of the object whose position we are estimating. Due to the nature of the regression problem and the odds of predicting an estimation that is an exact match of any given label, we subjectively established a threshold for error classification. After performing manual testing with a Microsoft HoloLens AR HMD, our team chose 10 centimeters as our threshold. This threshold represents the minimum acceptable error for a hologram to be offset from its proper position (while overlaying a tracked object) and for the user to still associate the hologram with the target object. Therefore, a prediction is considered correct if and only if the absolute difference between the respective axes of the predicted and ground-truth coordinates of the object is less than 10 centimeters:
+
+$$\left|\hat{y}_{x} - y_{x}\right| \le 10\ and\ \left|\hat{y}_{y} - y_{y}\right| \le 10\ and \left|\hat{y}_{z} - y_{z}\right| \le 10$$
+
+Here, ŷ\textsubscript{x} and y\textsubscript{x} are the predicted and ground-truth value of the x coordinate,
+ŷ\textsubscript{y} and y\textsubscript{y} are the predicted and ground-truth value of the y coordinate, and ŷ\textsubscript{z} and y\textsubscript{z} are the predicted and ground-truth value of the z coordinate respectively.
+
+We then compute the accuracy(acc\textsubscript{xyz}) of the model based on the total number of correct predictions. Apart from acc\textsubscript{xyz}, we also evaluate a model based the individual accuracies in predicting the X, Y, and Z coordinates separately - acc\textsubscript{x}, acc\textsubscript{y} and acc\textsubscript{z}. Splitting out these value's accuracies is critical for gaining insight toward how changes in the datasets features (camera lens, object appearance, camera position, environment visual features, lighting, etc.) impact the CNN's accuracy.
+
+\subsection{Model architecture}
+Our approach to building a CNN was to pipe together a group of convolutional blocks consisting of a convolutional layer and a pooling layer. One of our very initial models consisted of three convolutional blocks with three fully connected layers succeeding it as shown in Figure \ref{fig:model1}. Relu was used as the activation function after each of the convolutional layer. The loss function used was Mean Squared Error. This model gave an average accuracy(acc\textsubscript{xyz}) of 42\% with the individual accuracies being - acc\textsubscript{x} = 78\%, acc\textsubscript{y} = 51\% and acc\textsubscript{z} = 89\%.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\linewidth]{model1.png}
+  \caption{Interim Model 1.}
+  \label{fig:model1}
+\end{figure}
+
+To increase the accuracy further, we added three more Convolutional Blocks to the CNN as shown in Figure \ref{fig:model2}. As a consequence, the average accuracy of the model (acc\textsubscript{xyz}) burgeoned to 83\%. The average individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} were 95\%, 87\% and 97\% respectively.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{model2.png}
+  \caption{Interim Model 2.}
+  \label{fig:model2}
+\end{figure}
+
+We can infer from the observations of the above models that the model performance is being brought down by acc\textsubscript{y}. We found the distortion caused by fish eye lens to be decreasing acc\textsubscript{y} value predictions, and in turn, overall accuracy. Therefore, we changed the lens type of the camera as well as tweaked the CNN to use a different loss function to better predict the depth(acc\textsubscript{y}) of the object from an image.
+
+\subsection{Loss function}
+
+In our regression task, we used a straightforward loss function - L2 norm that minimizes the squared Euclidean distance
+between the estimated values ŷ and the ground-truth y. However, L2 norm loss function is not robust to outliers. Convex regression loss functions are considered not robust [1]. During back-propagation, small differences between the ground-truth and the estimated values have a little influence to the CNN weights modification, while large differences between the ground-truth and the estimated values (outliers) make a large penalty, which biases the whole training process towards the outliers [1]. Inspired by Robust Statistics [2, 3], we consider a non-convex loss function that is robust in regression tasks, namely Tukey's biweight loss function (Eq. \ref{tukeyEqn}) [2]. Tukey's biweight loss function has the property that the small residual values influence the training process, and it is robust to the outliers (large difference between the ground-truth depth value and the estimated depth value). During back-propagation, the magnitude of the outliers’ gradient sets closed to zero, so it will suppress the influence of the outliers during the training process [3].
+
+\begin{equation}
+\label{tukeyEqn}
+\rho(r)=
+\begin{cases}
+\frac{c^2}{6}\left[1\ -\ \left(1\ -\ \frac{r^2}{c^2}\right)^3 \right],  & \left|r\right|\ \le\ c \\
+\frac{c^2}{6}, & otherwise \\
+\end{cases}\\
+\end{equation}
+
+Where c is a tuning constant that is usually set to 4.6851, and r is the residual (i.e. the difference between the ground-truth y and the estimated depth value ŷ).
+\begin{equation}
+r\ = \ \hat{y} - y
+\end{equation}
+
+\subsection{Effect of Tukey's Biweight Loss Function}
+Using a non-convex loss function like Tukey's biweight, pushed the accuracy of our model (acc\textsubscript{xyz}) to 92\% with the individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} being 98\%, 93\%, and 99\% respectively.
+
+We also learned that regression tasks required fewer filters with small kernel size and almost no need to use fully connected layers compared to classification tasks. Thus, the number of fully connected layers in our CNN was reduced to one as shown in Figure \ref{fig:model3}. This not only extracted more powerful features from the input image, but also reduced the number of parameters in the network and its computational cost [3]. The accuracy(acc\textsubscript{xyz}) with this model increased to 97\% with individual accuracies acc\textsubscript{x}, acc\textsubscript{y}, acc\textsubscript{z} being 98\%, 98\%, and 99\% respectively.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{final.png}
+  \caption{Final architecture of the CNN with Tukey's Biweight as loss function.}
+  \label{fig:model3}
+\end{figure}
+
+The Table \ref{acc-table} shows a summary of the accuracies achieved with different models.
+
+\begin{table}[t]
+  \caption{Accuracies of different models when trained for 100 epochs}
+  \label{acc-table}
+  \centering
+  \begin{tabular}{lcccccc}
+    \toprule
+    \multicolumn{6}{r}{Average Accuracy(5 trials)}                   \\
+    \cmidrule{3-7}
+    Model Architecture & Loss function & acc\textsubscript{xyz }& acc\textsubscript{x} & acc\textsubscript{y} & acc\textsubscript{z} & $\sigma_{xyz}$\\
+    \midrule
+    3 Conv Blocks, 3 Dense & MSE  & 42\% & 78\% & 52\% & 89\% & 14\%\\
+    6 Conv Blocks, 3 Dense & MSE & 83\% & 95\% & 87\% & 97\% & 11\%\\
+    6 Conv Blocks, 3 Dense & Tukey's Biweight & 92\% & 98\% & 93\% & 99\% & 3\% \\
+    6 Conv Blocks, 1 Dense & Tukey's Biweight & 97\% & 98\% & 98\% & 99\% & 1\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Discussion}
+\label{discussion}
+\subsection{Object Selection}
+
+We started our data collection with a cuboid object with distinct colors on each of its sides. The prediction of y(depth) becomes a concern in case of asymmetric objects like a cuboid, as the plane which has the least area may be assumed as distant from camera but in reality it may be close to camera. We designed our tracked object as such to provide the CNN the ability to infer full pose (each side being unique provides enough information to estimate object rotation). Although we predicted this object design to perform well, we were obtaining only unacceptable accuracies of less than 10\%. While reviewing our dataset, we noticed that the camera was not able to capture all the object's colors properly due to glare on the sides of object from inadequate lighting and the low camera quality. With this knowledge in mind, we decided to go with a simpler object for data collection as well as reducing our model to only look at object position (X, Y, Z) and not its full pose (X, Y, Z, R, P, Q).
+
+We then chose a spherical object with a bright single color as our test subject and collected data in a contained environment. We were able to achieve an accuracy of 97\% by adding more convolution layers to aid in capture the object's curves.  We achieved this accuracy after increasing dataset from 6000 images to 9000 images as it helped the model to train better. One of the reason behind this accuracy was that our test and training data was very similar and was captured in a similar fashion.
+
+\section{Conclusion}
+
+\subsection{Limitations and Future Work}
+Although we were able to achieve an accuracy above 95\%, our solution to object tracking has many limitations. Firstly, the current model is trained solely in a controlled lab environment. Our model would generalize poorly to environments outside of the lab due to other objects in the scene of similar size and shape as well as the environment backdrop having various confounding colors. Another limitation of this approach is that our model only predicts the relative position (X,Y,Z) of the target object and excludes rotational coordinates (roll, pitch, yaw). To properly anchor holograms to real objects one would need to know rotational information as well using camera image input and previous pose estimates, which even allows for moderate occlusion [4]. To make it robust to occlusions, we can augment the training data by occluding the object with another virtual object and this can be applied to some training samples instead of all the training data [4].
+
+The error threshold definition was a purely subjective decision and is a limitation within our experiment. Ideally we would run a separate experimental user study in which we would evaluate what the minimum acceptable amount of hologram offset is while still maintaining an acceptable level of usability and immersion. However, due to the scope of the class and time limitations, we were not able to explore this question further and made a judgement call using our intuition and first hand experience with AR HMDs. We recommend future studies explore this problem as it is essential for improving user experience with AR HMDs.
+
+The model with the current slack value has to be reduced to a much smaller number for it to be used in any real life applications. Further improvements in dataset, model architecture and prepocessing can help in having a slack in the range of vicon cameras making it a viable option to be used.
+
+The images which we obtain outside the lab environment can have a lot of noise other than the target object. We need to have a good preprocessing step which can remove the noise in the images before passing it to neural network for pose prediction. Alternatively, future work might explore the scalability of our designs in supporting the tracking of multiple objects and not only one as in this study.  
+
+\subsection{Project Media}
+For a further look at our demo videos and data collection process please visit our project media repository: \url{https://drive.google.com/drive/folders/1iitwG0M6WlqesChOWIUcK1qrPzFrHt7g?usp=sharing}
+
+\section*{References}
+[1] V. Belagiannis, C. Rupprecht, G. Carneiro, and N. Navab, “Robust
+optimization for deep regression,” in Proc. Conf. International
+Conference on Computer Vision, 2015.
+
+[2] M. J. Black and A. Rangarajan, “On the unification of line processes,
+outlier rejection, and robust statistics with applications in early vision,”
+IJCV, 1996.
+
+[3] A. J. Afifi and O. Hellwich, "Object Depth Estimation from a Single Image Using Fully Convolutional Neural Network," 2016 International Conference on Digital Image Computing: Techniques and Applications (DICTA), Gold Coast, QLD, 2016, pp. 1-7.
+
+[4] Garon, Mathieu, and Jean-François Lalonde. "Deep 6-DOF Tracking." arXiv preprint arXiv:1703.09771 (2017).
+
+\end{document}
